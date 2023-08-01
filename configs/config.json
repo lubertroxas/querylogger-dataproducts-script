@@ -1,0 +1,75 @@
+{
+    "url": "<SEP URL>",
+    "user": "<your-username>",
+    "password": "<your password>",
+    "headers": {"X-Trino-Role": "system=ROLE{sysadmin}"},
+    "verify": false,
+    "debug": false,
+    "createDomain": false,
+    "publishDataProduct" : true,
+    "forceRepublish" : false, 
+    "dpOwnerName" : "dpOwner",
+    "dpOwnerEmail" : "dpOwner@email.com",
+    "dpCatalogName" : "data_products",
+    "insightsCatalogName" : "query_logger", 
+    "insightsSchemaName" : "public",
+    "domain": {
+        "domainName": "Cluster Metrics",
+        "domainDescription": "",
+        "domainPath" : "<Doman Path for Cluster Metrics>"
+    },
+    "dataProduct" : {
+        "name": "Insights Data thru API 4",
+        "catalogName": "##DP_CATALOG_NAME##",
+        "dataDomainId": "##DP_DOMAIN_ID##",
+        "summary": "Cluster Information and Query Metrics - Created thru APIs",
+        "views": [
+            {
+              "name": "cluster_metrics_during_high_concurrency",
+              "description": "Show cluster metrics during periods of high concurrency  ",
+              "definitionQuery": "SELECT running_queries,queued_queries, sample_interval_start, sample_interval_end, nodes, cpus, system_cpu_load, process_cpu_load, presto_memory, used_query_memory, total_query_memory, used_heap_size, total_heap_size FROM ##InsightsCatalog##.##InsightsSchema##.\"cluster_metrics\" WHERE running_queries > 0 ORDER BY running_queries DESC"
+            },
+            {
+              "name": "cluster_usage",
+              "description": "Show cluster usage",
+              "definitionQuery": "SELECT * FROM ##InsightsCatalog##.##InsightsSchema##.\"cluster_metrics\""
+            },
+            {
+              "name": "cluster_usage_last_30_days",
+              "description": "Show cluster usag for the last 30 days",
+              "definitionQuery": "SELECT * FROM ##InsightsCatalog##.##InsightsSchema##.\"cluster_metrics\" where sample_interval_start > CURRENT_TIMESTAMP - INTERVAL '30' DAY"
+            },
+            {
+              "name": "completed_queries_non_insights",
+              "description": "Shows completed queries not fired from the Insights UI, or using data products. ",
+              "definitionQuery": "SELECT * FROM ##InsightsCatalog##.##InsightsSchema##.\"completed_queries\"  WHERE source not in ('dataproduct','insights','insights-explorer')"
+            },
+            {
+              "name": "completed_queries_runtime",
+              "description": "Shows cpu time, actual run time, and scheduled time for completed queries not fired from Data Products nor Insights UI",
+              "definitionQuery": "SELECT query_id, usr, query,  cpu_time_ms, wall_time_ms, scheduled_time  FROM ##InsightsCatalog##.##InsightsSchema##.\"completed_queries\"  WHERE source not in ('dataproduct','insights','insights-explorer')"
+            },
+            {
+              "name": "daily_query_metrics_per_catalog",
+              "description": "Daily query metrics per data source unit",
+              "definitionQuery": "SELECT  catalog_name,  schema_name,  table_name,  count(query_id) as total_queries,  sum(physical_bytes) as total_bytes FROM ##InsightsCatalog##.##InsightsSchema##.\"query_tables\"  WHERE catalog_name not like '$%' GROUP BY catalog_name, schema_name, table_name ORDER BY total_queries DESC"
+            },
+            {
+              "name": "daily_user_query_metric_aggregate",
+              "description": "Show query metrics aggregated per user",
+              "definitionQuery": "SELECT  usr,  DATE(create_time) AS execution_date, count(*) as num_queries,  sum(cpu_time_ms) as total_cpu_time,  sum(total_bytes) as total_bytes FROM ##InsightsCatalog##.##InsightsSchema##.\"completed_queries\"  GROUP BY usr, DATE(create_time)  ORDER BY execution_date desc"
+            },
+            {
+              "name": "resource_usage_against_cluster_metrics",
+              "description": "Show resource usage agains cluster metrics",
+              "definitionQuery": "SELECT  cq.query_id, cq.usr, cq.catalog, cq.schema, cq.execution_time, cq.cpu_time_ms, cq.cpu_time_distribution, cq.peak_total_non_revocable_memory_bytes, cq.peak_user_memory_bytes, cq.cumulative_memory, cq.cumulative_system_memory, cm.total_query_memory, cm.total_heap_size FROM ##InsightsCatalog##.##InsightsSchema##.\"completed_queries\" cq  INNER JOIN ##InsightsCatalog##.##InsightsSchema##.\"cluster_metrics\" cm ON cq.create_time >= cm.sample_interval_start and cq.end_time <= cm.sample_interval_end WHERE cm.running_queries > 0"
+            }
+          ],
+        "owners": [
+          {
+            "name": "##DP_OWNER_NAME##",
+            "email": "##DP_OWNER_EMAIL##"
+          }
+        ]
+      }
+}
